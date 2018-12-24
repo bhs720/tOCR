@@ -1,5 +1,5 @@
 #include <stdio.h>
-
+#include "tiff\tiffio.h"
 #include "mupdf\fitz.h"
 #include "mupdf\fitz\image.h"
 #include "extract-device.h"
@@ -31,7 +31,23 @@ void run_pdf_info(fz_context *ctx, fz_document *doc, int pagecount)
 
 void run_pdf_extraction(fz_context *ctx, fz_document *doc, int pagecount, char *output_base)
 {
+	fz_page *page = NULL;
+	fz_device *dev = NULL;
 
+	for (int i = 0; i < pagecount; i++)
+	{
+		page = fz_load_page(ctx, doc, i);
+		dev = fz_new_extract_device(ctx, i, fz_stdout(ctx), output_base, "extracted");
+		fz_enable_device_hints(ctx, dev, FZ_DONT_INTERPOLATE_IMAGES);
+		fz_enable_device_hints(ctx, dev, FZ_NO_CACHE);
+		fz_run_page(ctx, page, dev, &fz_identity, NULL);
+		fz_close_device(ctx, dev);
+		fz_drop_device(ctx, dev);
+		fz_drop_page(ctx, page);
+
+		dev = NULL;
+		page = NULL;
+	}
 }
 
 int main(int argc, char **argv)
@@ -41,7 +57,7 @@ int main(int argc, char **argv)
 	char *input_file = NULL;
 	char *output_base = NULL;
 	int pagecount = 0;
-
+	
 	if (argc < 2)
 	{
 		fprintf(stderr, "Missing filename argument\r\n");
